@@ -2,21 +2,26 @@ use minifb::{Key, KeyRepeat, MouseButton, MouseMode, Window, WindowOptions};
 use rayon::prelude::*;
 use std::time::{Duration, Instant};
 
-const WIDTH: usize = 650;
-const HEIGHT: usize = 500;
+const WIDTH: usize = 900;
+const HEIGHT: usize = 600;
 const WIDTH_F: f64 = WIDTH as f64;
 const HEIGHT_F: f64 = HEIGHT as f64;
 
+const MAX_ITERATION_JUMP: u32 = 250;
+const MAX_ITERATION_LOWER_BOUND: u32 = 100;
+const ZOOM_FACTOR: f64 = 1.1;
+
 const CLICK_DELAY_MILLIS: u64 = 100;
 
-#[derive(PartialEq, PartialOrd, Clone)]
+#[derive(PartialEq, PartialOrd, Clone, Debug)]
 struct Params {
     zoom: f64,
     centre_x: f64,
     centre_y: f64,
     max_iterations: u32,
     scroll: f32,
-    last_modified: Instant,
+    last_clicked: Instant,
+    last_scrolled: Instant,
 }
 
 impl Params {
@@ -27,7 +32,8 @@ impl Params {
             centre_y: 0.0,
             max_iterations: 100,
             scroll: 0.0,
-            last_modified: Instant::now(),
+            last_clicked: Instant::now(),
+            last_scrolled: Instant::now(),
         }
     }
 
@@ -74,7 +80,14 @@ impl Params {
             })
             .map(|iterations| self.colour_iterations(iterations))
             .collect();
-        println!("Update time: {:?}", start_time.elapsed());
+        println!(
+            "{:?} for: Max iters = {}, Zoom = {}, Centre = ({},{})",
+            start_time.elapsed(),
+            self.max_iterations,
+            self.zoom,
+            self.centre_x,
+            self.centre_y,
+        );
         output
     }
 
@@ -82,51 +95,57 @@ impl Params {
         // Translation
         let region_width = self.region_width();
         let region_height = self.region_height();
-        if window.get_mouse_down(MouseButton::Left) {
-            if let Some((mouse_x, mouse_y)) = window.get_mouse_pos(MouseMode::Discard) {
-                let change_x = mouse_x as f64 / WIDTH_F - 0.5;
-                let change_y = -mouse_y as f64 / HEIGHT_F + 0.5;
-                self.centre_x += change_x * region_width;
-                self.centre_y += change_y * region_height;
+        if self.last_clicked.elapsed() > Duration::from_millis(CLICK_DELAY_MILLIS) {
+            if window.get_mouse_down(MouseButton::Left) {
+                if let Some((mouse_x, mouse_y)) = window.get_mouse_pos(MouseMode::Discard) {
+                    let change_x = mouse_x as f64 / WIDTH_F - 0.5;
+                    let change_y = -mouse_y as f64 / HEIGHT_F + 0.5;
+                    self.centre_x += change_x * region_width;
+                    self.centre_y += change_y * region_height;
+                }
+                self.last_clicked = Instant::now();
             }
         }
-        if window.is_key_pressed(Key::Up, KeyRepeat::No) {
+        if window.is_key_pressed(Key::Up, KeyRepeat::Yes) {
             self.centre_y += 0.1 * region_height; // Pan up
         }
-        if window.is_key_pressed(Key::Down, KeyRepeat::No) {
+        if window.is_key_pressed(Key::Down, KeyRepeat::Yes) {
             self.centre_y -= 0.1 * region_height; // Pan down
         }
-        if window.is_key_pressed(Key::Right, KeyRepeat::No) {
+        if window.is_key_pressed(Key::Right, KeyRepeat::Yes) {
             self.centre_x += 0.1 * region_width; // Pan right
         }
-        if window.is_key_pressed(Key::Left, KeyRepeat::No) {
+        if window.is_key_pressed(Key::Left, KeyRepeat::Yes) {
             self.centre_x -= 0.1 * region_width; // Pan left
         }
 
         // Zooming
-        if window.is_key_pressed(Key::W, KeyRepeat::No) {
+        if window.is_key_pressed(Key::W, KeyRepeat::Yes) {
             self.zoom *= 2.0;
         }
-        if window.is_key_pressed(Key::S, KeyRepeat::No) {
+        if window.is_key_pressed(Key::S, KeyRepeat::Yes) {
             self.zoom *= 0.5;
         }
-        // if let Some((_, scroll)) = window.get_scroll_wheel() {
-        //     if scroll != self.scroll {
-        //         let diff = scroll - self.scroll;
-        //         self.zoom *= 2.0_f64.powf(diff as f64);
-        //         self.scroll = scroll;
-        //     }
-        // }
+        if let Some((_, scroll)) = window.get_scroll_wheel() {
+            self.zoom *= ZOOM_FACTOR.powf(scroll as f64);
+            self.last_scrolled = Instant::now();
+        }
 
         // Changing max iterations
+        if self.last_clicked.elapsed() > Duration::from_millis(CLICK_DELAY_MILLIS) {
+            if window.get_mouse_down(MouseButton::Right) {
+                self.max_iterations += MAX_ITERATION_JUMP;
+                self.last_clicked = Instant::now();
+            }
+        }
         if window.is_key_pressed(Key::D, KeyRepeat::No) {
-            self.max_iterations += 500;
+            self.max_iterations += MAX_ITERATION_JUMP;
         }
         if window.is_key_pressed(Key::A, KeyRepeat::No) {
-            if self.max_iterations <= 600 {
-                self.max_iterations = 100;
+            if self.max_iterations <= MAX_ITERATION_JUMP + MAX_ITERATION_LOWER_BOUND {
+                self.max_iterations = MAX_ITERATION_LOWER_BOUND;
             } else {
-                self.max_iterations -= 500;
+                self.max_iterations -= MAX_ITERATION_JUMP;
             }
         }
     }
@@ -145,17 +164,13 @@ impl State {
     }
 
     fn update(&mut self, window: &Window) {
-        // Only update parameters every so often, no spamming
-        if self.params.last_modified.elapsed() > Duration::from_millis(CLICK_DELAY_MILLIS) {
-            let old_params = self.params.clone();
+        let old_params = self.params.clone();
 
-            self.params.update(window);
+        self.params.update(window);
 
-            // Only update pixels if the parameters have been changed
-            if self.params != old_params {
-                self.pixels = self.params.get_pixels();
-                self.params.last_modified = Instant::now();
-            }
+        // Only update pixels if the parameters have been changed
+        if self.params != old_params {
+            self.pixels = self.params.get_pixels();
         }
     }
 }
