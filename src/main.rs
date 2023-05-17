@@ -11,7 +11,27 @@ const MAX_ITERATION_JUMP: u32 = 250;
 const MAX_ITERATION_LOWER_BOUND: u32 = 100;
 const ZOOM_FACTOR: f64 = 1.1;
 
-const CLICK_DELAY_MILLIS: u64 = 100;
+const CLICK_DELAY_MILLIS: u64 = 150;
+
+const COLOURS: [(u8, u8, u8); 4] = [
+    (10, 147, 150),  // Dark blue
+    (0, 18, 25),     // Blackish
+    (174, 32, 18),   // Orange
+    (233, 216, 166), // Light yellow
+];
+const NUM_COLOURS: usize = COLOURS.len();
+
+fn linear_interpolation((r1, g1, b1): (u8, u8, u8), (r2, g2, b2): (u8, u8, u8), t: f64) -> u32 {
+    let red = interpolate_component(r1, r2, t);
+    let green = interpolate_component(g1, g2, t);
+    let blue = interpolate_component(b1, b2, t);
+    red << 16 | green << 8 | blue
+}
+
+fn interpolate_component(c1: u8, c2: u8, t: f64) -> u32 {
+    let interpolated = (c1 as f64) * (1.0 - t) + (c2 as f64) * t;
+    interpolated.round() as u32
+}
 
 #[derive(PartialEq, PartialOrd, Clone, Debug)]
 struct Params {
@@ -21,7 +41,6 @@ struct Params {
     max_iterations: u32,
     scroll: f32,
     last_clicked: Instant,
-    last_scrolled: Instant,
 }
 
 impl Params {
@@ -33,7 +52,6 @@ impl Params {
             max_iterations: 100,
             scroll: 0.0,
             last_clicked: Instant::now(),
-            last_scrolled: Instant::now(),
         }
     }
 
@@ -54,9 +72,16 @@ impl Params {
         }
     }
 
-    fn colour_iterations(&self, iterations: f64) -> u32 {
-        let grayscale = (iterations / self.max_iterations as f64 * 255.0) as u32;
-        (grayscale << 16) | (grayscale << 8) | grayscale
+    fn colour_iterations(&self, mut iterations: f64) -> u32 {
+        iterations *= 0.03;
+        let iter_whole = iterations.floor();
+        let iter_frac = iterations - iter_whole;
+        let iter_whole = iter_whole as usize;
+
+        let colour = COLOURS[iter_whole % NUM_COLOURS];
+        let next_colour = COLOURS[(iter_whole + 1) % NUM_COLOURS];
+
+        linear_interpolation(colour, next_colour, iter_frac)
     }
 
     fn region_width(&self) -> f64 {
@@ -132,7 +157,6 @@ impl Params {
         }
         if let Some((_, scroll)) = window.get_scroll_wheel() {
             self.zoom *= ZOOM_FACTOR.powf(scroll as f64);
-            self.last_scrolled = Instant::now();
         }
 
         // Changing max iterations
