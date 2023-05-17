@@ -37,7 +37,7 @@ impl Params {
         }
     }
 
-    fn get_iterations(&self, c_re: f64, c_im: f64) -> u32 {
+    fn get_iterations(&self, c_re: f64, c_im: f64) -> f64 {
         let mut z_re = 0.0;
         let mut z_im = 0.0;
         let mut iterations = 0;
@@ -47,11 +47,15 @@ impl Params {
             z_im = 2.0 * z_re_ * z_im + c_im;
             iterations += 1;
         }
-        iterations
+        if iterations < self.max_iterations {
+            iterations as f64 - ((z_re * z_re + z_im * z_im).log2() / 2.0).log2()
+        } else {
+            iterations as f64
+        }
     }
 
-    fn colour_iterations(&self, iterations: u32) -> u32 {
-        let grayscale = (iterations as f64 / self.max_iterations as f64 * 255.0) as u32;
+    fn colour_iterations(&self, iterations: f64) -> u32 {
+        let grayscale = (iterations / self.max_iterations as f64 * 255.0) as u32;
         (grayscale << 16) | (grayscale << 8) | grayscale
     }
 
