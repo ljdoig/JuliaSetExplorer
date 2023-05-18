@@ -29,6 +29,18 @@ impl ColorPalette {
         })
     }
 
+    pub fn default() -> ColorPalette {
+        Self::new(vec![
+            (0., Rgb([0, 18, 25])),
+            (0.1, Rgb([20, 33, 61])),
+            (0.25, Rgb([252, 163, 17])),
+            (0.6, Rgb([229, 229, 229])),
+            (0.8, Rgb([255, 255, 255])),
+            (1., Rgb([0, 0, 0])),
+        ])
+        .unwrap()
+    }
+
     pub fn value(&self, value: f64) -> u32 {
         if value > 1.0 {
             return rgb_to_u32(self.colors.last().unwrap().1);
@@ -50,7 +62,7 @@ impl ColorPalette {
                 let g = c1[1] + (t * (c2[1] as f64 - c1[1] as f64)) as u8;
                 let b = c1[2] + (t * (c2[2] as f64 - c1[2] as f64)) as u8;
 
-                (r as u32) << 16 | (g as u32) << 8 | b as u32
+                rgb_to_u32(Rgb([r, g, b]))
             }
         }
     }
