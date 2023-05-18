@@ -6,8 +6,8 @@ use std::time::{Duration, Instant};
 mod josh_palette;
 use josh_palette::ColorPalette;
 
-const WIDTH: usize = 1080;
-const HEIGHT: usize = 720;
+const WIDTH: usize = 1200;
+const HEIGHT: usize = 800;
 const WIDTH_F: f64 = WIDTH as f64;
 const HEIGHT_F: f64 = HEIGHT as f64;
 
@@ -30,7 +30,7 @@ impl Params {
         Params {
             centre_x: 0.0,
             centre_y: 0.0,
-            max_iterations: 75,
+            max_iterations: 125,
             last_clicked: Instant::now(),
         }
     }
@@ -49,7 +49,7 @@ impl Params {
     }
 
     fn region_width(&self) -> f64 {
-        4.0
+        4.5
     }
 
     fn region_height(&self) -> f64 {
