@@ -11,32 +11,26 @@ const HEIGHT: usize = 600;
 const WIDTH_F: f64 = WIDTH as f64;
 const HEIGHT_F: f64 = HEIGHT as f64;
 
-const MAX_ITERATION_JUMP: u32 = 250;
-const MAX_ITERATION_LOWER_BOUND: u32 = 100;
-const SCROLL_ZOOM: f64 = 1.1;
-const KEYS_ZOOM: f64 = 2.0;
-const KEYS_TRANSLATION: f64 = 0.01;
+const MAX_ITERATION_JUMP: u32 = 25;
+const MAX_ITERATION_LOWER_BOUND: u32 = 25;
+const KEYS_TRANSLATION: f64 = 0.004;
 
 const CLICK_DELAY_MILLIS: u64 = 150;
 
 #[derive(PartialEq, PartialOrd, Clone, Debug)]
 struct Params {
-    zoom: f64,
     centre_x: f64,
     centre_y: f64,
     max_iterations: u32,
-    scroll: f32,
     last_clicked: Instant,
 }
 
 impl Params {
     fn new() -> Self {
         Params {
-            zoom: 1.0,
             centre_x: 0.0,
             centre_y: 0.0,
-            max_iterations: 100,
-            scroll: 0.0,
+            max_iterations: 75,
             last_clicked: Instant::now(),
         }
     }
@@ -59,7 +53,7 @@ impl Params {
     }
 
     fn region_width(&self) -> f64 {
-        4.0 / self.zoom
+        4.0
     }
 
     fn region_height(&self) -> f64 {
@@ -69,9 +63,9 @@ impl Params {
     fn get_pixels(&self, palette: &ColorPalette) -> Vec<u32> {
         let start_time = Instant::now();
         let precomp1 = self.region_width() / WIDTH_F;
-        let precomp2 = -self.region_width() / 2.0; // + self.centre_x;
+        let precomp2 = -self.region_width() / 2.0;
         let precomp3 = -self.region_height() / HEIGHT_F;
-        let precomp4 = self.region_height() / 2.0; //+ self.centre_y;
+        let precomp4 = self.region_height() / 2.0;
         let output = (0..HEIGHT * WIDTH)
             .into_par_iter()
             .map(|i| {
@@ -84,10 +78,9 @@ impl Params {
             .map(|iterations| palette.value(iterations / self.max_iterations as f64))
             .collect();
         println!(
-            "{:?} for: Max iters = {}, Zoom = {}, Centre = ({},{})",
+            "{:?} for: Max iters = {}, Centre = ({},{})",
             start_time.elapsed(),
             self.max_iterations,
-            self.zoom,
             self.centre_x,
             self.centre_y,
         );
@@ -101,10 +94,10 @@ impl Params {
         if self.last_clicked.elapsed() > Duration::from_millis(CLICK_DELAY_MILLIS) {
             if window.get_mouse_down(MouseButton::Left) {
                 if let Some((mouse_x, mouse_y)) = window.get_mouse_pos(MouseMode::Discard) {
-                    let change_x = mouse_x as f64 / WIDTH_F - 0.5;
-                    let change_y = -mouse_y as f64 / HEIGHT_F + 0.5;
-                    self.centre_x += change_x * region_width;
-                    self.centre_y += change_y * region_height;
+                    let pos_x = mouse_x as f64 / WIDTH_F - 0.5;
+                    let pos_y = -mouse_y as f64 / HEIGHT_F + 0.5;
+                    self.centre_x = pos_x * region_width;
+                    self.centre_y = pos_y * region_height;
                 }
                 self.last_clicked = Instant::now();
             }
@@ -120,17 +113,6 @@ impl Params {
         }
         if window.is_key_pressed(Key::Left, KeyRepeat::Yes) {
             self.centre_x -= KEYS_TRANSLATION * region_width; // Pan left
-        }
-
-        // Zooming
-        if window.is_key_pressed(Key::W, KeyRepeat::Yes) {
-            self.zoom *= KEYS_ZOOM;
-        }
-        if window.is_key_pressed(Key::S, KeyRepeat::Yes) {
-            self.zoom *= 1.0 / KEYS_ZOOM;
-        }
-        if let Some((_, scroll)) = window.get_scroll_wheel() {
-            self.zoom *= SCROLL_ZOOM.powf(scroll as f64);
         }
 
         // Changing max iterations
@@ -163,11 +145,10 @@ impl State {
     fn new() -> Self {
         let palette = ColorPalette::new(vec![
             (0., Rgb([0, 18, 25])),
-            (0.05, Rgb([0, 18, 25])),
-            (0.2, Rgb([20, 33, 61])),
-            (0.35, Rgb([252, 163, 17])),
-            (0.4, Rgb([229, 229, 229])),
-            (0.6, Rgb([255, 255, 255])),
+            (0.1, Rgb([20, 33, 61])),
+            (0.25, Rgb([252, 163, 17])),
+            (0.6, Rgb([229, 229, 229])),
+            (0.8, Rgb([255, 255, 255])),
             (1., Rgb([0, 0, 0])),
         ])
         .unwrap();
@@ -193,13 +174,8 @@ impl State {
 }
 
 fn main() {
-    let mut window = Window::new(
-        "Mandelbrot Explorer",
-        WIDTH,
-        HEIGHT,
-        WindowOptions::default(),
-    )
-    .unwrap();
+    let mut window =
+        Window::new("Julia Explorer", WIDTH, HEIGHT, WindowOptions::default()).unwrap();
 
     let mut state = State::new();
 
