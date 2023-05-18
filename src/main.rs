@@ -87,16 +87,11 @@ impl Params {
         // Translation
         let region_width = self.region_width();
         let region_height = self.region_height();
-        if self.last_clicked.elapsed() > Duration::from_millis(CLICK_DELAY_MILLIS) {
-            if window.get_mouse_down(MouseButton::Left) {
-                if let Some((mouse_x, mouse_y)) = window.get_mouse_pos(MouseMode::Discard) {
-                    let pos_x = mouse_x as f64 / WIDTH_F - 0.5;
-                    let pos_y = -mouse_y as f64 / HEIGHT_F + 0.5;
-                    self.centre_x = pos_x * region_width;
-                    self.centre_y = pos_y * region_height;
-                }
-                self.last_clicked = Instant::now();
-            }
+        if let Some((mouse_x, mouse_y)) = window.get_mouse_pos(MouseMode::Discard) {
+            let pos_x = mouse_x as f64 / WIDTH_F - 0.5;
+            let pos_y = -mouse_y as f64 / HEIGHT_F + 0.5;
+            self.centre_x = pos_x * region_width;
+            self.centre_y = pos_y * region_height;
         }
         if window.is_key_pressed(Key::Up, KeyRepeat::Yes) {
             self.centre_y += KEYS_TRANSLATION * region_height; // Pan up
@@ -113,9 +108,16 @@ impl Params {
 
         // Changing max iterations
         if self.last_clicked.elapsed() > Duration::from_millis(CLICK_DELAY_MILLIS) {
-            if window.get_mouse_down(MouseButton::Right) {
+            if window.get_mouse_down(MouseButton::Left) {
                 self.max_iterations += MAX_ITERATION_JUMP;
                 self.last_clicked = Instant::now();
+            }
+            if window.get_mouse_down(MouseButton::Right) {
+                if self.max_iterations <= MAX_ITERATION_JUMP + MAX_ITERATION_LOWER_BOUND {
+                    self.max_iterations = MAX_ITERATION_LOWER_BOUND;
+                } else {
+                    self.max_iterations -= MAX_ITERATION_JUMP;
+                }
             }
         }
         if window.is_key_pressed(Key::D, KeyRepeat::No) {
