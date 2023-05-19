@@ -12,8 +12,8 @@ const HEIGHT_F: f64 = HEIGHT as f64;
 const X_RANGE: f64 = 4.5;
 const Y_RANGE: f64 = X_RANGE * HEIGHT_F / WIDTH_F;
 
-const MAX_ITERATION_DEFAULT: u32 = 75;
-const MAX_ITERATION_JUMP: u32 = 15;
+const MAX_ITERATION_DEFAULT: u32 = 50;
+const MAX_ITERATION_JUMP: u32 = 4;
 const MAX_ITERATION_LOWER_BOUND: u32 = 10;
 
 #[derive(PartialEq, PartialOrd, Clone, Debug)]
@@ -64,7 +64,7 @@ impl Params {
             .collect();
         let elapsed_time = format!("{:.2?}", start_time.elapsed());
         println!(
-            "{:>9} for: Max iters = {:3}, c = {:.3} + {:.3}i",
+            "{:>9} for: Max iters = {:3}, c = {:6.3} + {:6.3}i",
             elapsed_time, self.max_iterations, self.c_x, self.c_y,
         );
         output
@@ -80,14 +80,14 @@ impl Params {
         }
 
         // Changing max iterations
-        if window.get_mouse_down(MouseButton::Left) {
+        if window.get_mouse_down(MouseButton::Left) || window.is_key_down(Key::Left) {
             if self.max_iterations == MAX_ITERATION_LOWER_BOUND {
                 self.max_iterations = MAX_ITERATION_JUMP;
             } else {
                 self.max_iterations += MAX_ITERATION_JUMP;
             }
         }
-        if window.get_mouse_down(MouseButton::Right) {
+        if window.get_mouse_down(MouseButton::Right) || window.is_key_down(Key::Right) {
             if self.max_iterations <= MAX_ITERATION_JUMP {
                 self.max_iterations = MAX_ITERATION_LOWER_BOUND;
             } else {
