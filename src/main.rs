@@ -2,15 +2,9 @@ use minifb::{Key, MouseButton, MouseMode, Window, WindowOptions};
 use rayon::prelude::*;
 use std::time::Instant;
 
-mod josh_palette;
-use josh_palette::ColorPalette;
-
-const WIDTH: usize = 1200;
-const HEIGHT: usize = 800;
-const WIDTH_F: f64 = WIDTH as f64;
-const HEIGHT_F: f64 = HEIGHT as f64;
-const X_RANGE: f64 = 4.5;
-const Y_RANGE: f64 = X_RANGE * HEIGHT_F / WIDTH_F;
+use explorer::josh_palette::ColorPalette;
+use explorer::mandelbrot::get_iterations;
+use explorer::*;
 
 const MAX_ITERATION_DEFAULT: u32 = 50;
 const MAX_ITERATION_JUMP: u32 = 4;
@@ -32,42 +26,26 @@ impl Params {
         }
     }
 
-    fn get_iterations(&self, mut z_re: f64, mut z_im: f64) -> f64 {
-        let c_re = self.c_x;
-        let c_im = self.c_y;
-        let mut iterations = 0;
-        while iterations < self.max_iterations && z_re * z_re + z_im * z_im <= 4.0 {
-            let z_re_ = z_re;
-            z_re = (z_re + z_im) * (z_re - z_im) + c_re;
-            z_im = 2.0 * z_re_ * z_im + c_im;
-            iterations += 1;
-        }
-        iterations as f64
-    }
-
-    fn get_pixels(&self, palette: &ColorPalette) -> Vec<u32> {
-        let start_time = Instant::now();
+    fn get_pixels(&self, palette: &ColorPalette, mandelbrot: bool) -> Vec<u32> {
         let precomp1 = X_RANGE / WIDTH_F;
         let precomp2 = -X_RANGE / 2.0;
         let precomp3 = -Y_RANGE / HEIGHT_F;
         let precomp4 = Y_RANGE / 2.0;
-        let output = (0..HEIGHT * WIDTH)
+        (0..HEIGHT * WIDTH)
             .into_par_iter()
             .map(|i| {
                 let col = i % WIDTH;
                 let row = i / WIDTH;
                 let x = col as f64 * precomp1 + precomp2;
                 let y = row as f64 * precomp3 + precomp4;
-                self.get_iterations(x, y)
+                if mandelbrot {
+                    get_iterations(0.0, 0.0, x, y, 200)
+                } else {
+                    get_iterations(x, y, self.c_x, self.c_y, self.max_iterations)
+                }
             })
             .map(|iterations| palette.value(iterations / self.max_iterations as f64))
-            .collect();
-        let elapsed_time = format!("{:.2?}", start_time.elapsed());
-        println!(
-            "{:>9} for: Max iters = {:3}, c = {:6.3} + {:6.3}i",
-            elapsed_time, self.max_iterations, self.c_x, self.c_y,
-        );
-        output
+            .collect()
     }
 
     fn update(&mut self, window: &Window) {
@@ -96,7 +74,7 @@ impl Params {
         }
 
         // Reset
-        if window.is_key_pressed(Key::Space, minifb::KeyRepeat::No) {
+        if window.is_key_pressed(Key::Enter, minifb::KeyRepeat::No) {
             self.max_iterations = MAX_ITERATION_DEFAULT;
         }
     }
@@ -110,13 +88,10 @@ struct State {
 
 impl State {
     fn new() -> Self {
-        let palette = ColorPalette::default();
-        let params = Params::new();
-        let pixels = params.get_pixels(&palette);
         State {
-            params,
-            pixels,
-            palette,
+            params: Params::new(),
+            pixels: vec![],
+            palette: ColorPalette::default(),
         }
     }
 
@@ -126,8 +101,16 @@ impl State {
         self.params.update(window);
 
         // Only update pixels if the parameters have been changed
-        if self.params != old_params {
-            self.pixels = self.params.get_pixels(&self.palette);
+        if self.params != old_params || window.is_key_down(Key::Space) {
+            let start_time = Instant::now();
+            self.pixels = self
+                .params
+                .get_pixels(&self.palette, window.is_key_down(Key::Space));
+            let elapsed_time = format!("{:.2?}", start_time.elapsed());
+            println!(
+                "{:>9} for: Max iters = {:3}, c = {:6.3} + {:6.3}i",
+                elapsed_time, self.params.max_iterations, self.params.c_x, self.params.c_y,
+            );
         }
     }
 }
