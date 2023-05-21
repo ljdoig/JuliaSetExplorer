@@ -6,4 +6,5 @@ edition = "2021"
 [dependencies]
 minifb = "0.17.0"
 rayon = "1.5.1"
-image = "0.23.14"
+image = "0.24.5"
+mandelbruhst-cli = "0.1.0"

@@ -1,4 +1,3 @@
-pub mod josh_palette;
 pub mod mandelbrot;
 
 pub const WIDTH: usize = 1000;

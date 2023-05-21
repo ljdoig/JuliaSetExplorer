@@ -1,7 +1,8 @@
+use image::Rgb;
+use mandelbruhst_cli::palette::ColorPalette;
 use rayon::prelude::*;
 use std::marker::Sync;
 
-use crate::josh_palette::ColorPalette;
 use crate::*;
 
 fn iterations(mut z_re: f64, mut z_im: f64, c_re: f64, c_im: f64, max_iterations: u32) -> f64 {
@@ -15,7 +16,7 @@ fn iterations(mut z_re: f64, mut z_im: f64, c_re: f64, c_im: f64, max_iterations
     iterations as f64
 }
 
-fn rev_append(mut a: Vec<u32>) -> Vec<u32> {
+fn rev_appended(mut a: Vec<u32>) -> Vec<u32> {
     let mut b = a.clone();
     b.reverse();
     a.append(&mut b);
@@ -39,18 +40,23 @@ fn get_pixels(num_pixels: usize, get_pixel: impl Fn(f64, f64) -> u32 + Sync) -> 
         .collect()
 }
 
+fn iterations_to_u32(iterations: f64, max_iterations: u32, palette: &ColorPalette) -> u32 {
+    let Rgb([r, g, b]) = palette.value(iterations / max_iterations as f64);
+    (r as u32) << 16 | (g as u32) << 8 | (b as u32)
+}
+
 pub fn julia_pixels(c_re: f64, c_im: f64, max_iterations: u32, palette: &ColorPalette) -> Vec<u32> {
     let get_pixel = |x, y| {
         let iterations = iterations(x, y, c_re, c_im, max_iterations);
-        palette.value(iterations / max_iterations as f64)
+        iterations_to_u32(iterations, max_iterations, palette)
     };
     let first_half = get_pixels(HEIGHT * WIDTH / 2, get_pixel);
-    rev_append(first_half)
+    rev_appended(first_half)
 }
 
 pub fn mandelbrot_pixels(max_iterations: u32, palette: &ColorPalette) -> Vec<u32> {
     get_pixels(HEIGHT * WIDTH, |x, y| {
         let iterations = iterations(0.0, 0.0, x, y, max_iterations);
-        palette.value(iterations / max_iterations as f64)
+        iterations_to_u32(iterations, max_iterations, palette)
     })
 }

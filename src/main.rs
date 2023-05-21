@@ -1,7 +1,7 @@
-use minifb::{Key, KeyRepeat, MouseButton, MouseMode, Window, WindowOptions};
+use mandelbruhst_cli::palette::{ColorPalette, ConfigRGB};
+use minifb::{Key, KeyRepeat, MouseButton, MouseMode, Scale, Window, WindowOptions};
 use std::time::Instant;
 
-use explorer::josh_palette::ColorPalette;
 use explorer::mandelbrot::{julia_pixels, mandelbrot_pixels};
 use explorer::*;
 
@@ -66,11 +66,43 @@ struct State {
 
 impl State {
     fn new() -> Self {
-        let palette = ColorPalette::default();
+        let palette = ColorPalette::new(vec![
+            ConfigRGB {
+                value: 0.0,
+                red: 0,
+                green: 18,
+                blue: 25,
+            },
+            ConfigRGB {
+                value: 0.1,
+                red: 20,
+                green: 33,
+                blue: 61,
+            },
+            ConfigRGB {
+                value: 0.25,
+                red: 252,
+                green: 163,
+                blue: 17,
+            },
+            ConfigRGB {
+                value: 0.5,
+                red: 229,
+                green: 229,
+                blue: 229,
+            },
+            ConfigRGB {
+                value: 1.0,
+                red: 255,
+                green: 255,
+                blue: 255,
+            },
+        ])
+        .unwrap();
         State {
             params: Params::new(),
             pixels: vec![],
-            ref_pixels: mandelbrot_pixels(150, &palette),
+            ref_pixels: mandelbrot_pixels(120, &palette),
             palette,
         }
     }
