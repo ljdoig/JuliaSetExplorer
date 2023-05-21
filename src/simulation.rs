@@ -1,26 +1,24 @@
 use crate::iterations::{julia_pixels, mandelbrot_pixels};
 use crate::window_size::*;
 use mandelbruhst_cli::palette::ColorPalette;
-use minifb::{Key, KeyRepeat, MouseButton, MouseMode, Window, WindowOptions};
+use minifb::{Key, KeyRepeat, MouseButton, MouseMode, ScaleMode, Window, WindowOptions};
 use std::time::Instant;
 
-const MAX_ITERATION_DEFAULT: u32 = 50;
+const MAX_ITERATION_DEFAULT: u32 = 60;
 const MAX_ITERATION_JUMP: u32 = 4;
 const MAX_ITERATION_LOWER_BOUND: u32 = 10;
-const KEY_TRANSLATION_DISTANCE: f64 = 0.03;
-
 const MANDELBROT_MAX_ITERATION: u32 = 100;
 
 #[derive(PartialEq, PartialOrd, Clone, Debug)]
-pub struct Params {
+pub struct JuliaParams {
     pub c_re: f64,
     pub c_im: f64,
     pub max_iterations: u32,
 }
 
-impl Params {
+impl JuliaParams {
     pub fn new() -> Self {
-        Params {
+        JuliaParams {
             c_re: 0.0,
             c_im: 0.0,
             max_iterations: MAX_ITERATION_DEFAULT,
@@ -29,23 +27,13 @@ impl Params {
 
     pub fn update(&mut self, window: &Window) {
         // Translation
-        if let Some((mouse_x, mouse_y)) = window.get_mouse_pos(MouseMode::Discard) {
-            let pos_x = mouse_x as f64 / WIDTH_F - 0.5;
-            let pos_y = -mouse_y as f64 / HEIGHT_F + 0.5;
-            self.c_re = pos_x * X_RANGE;
-            self.c_im = pos_y * Y_RANGE;
-        }
-        if window.is_key_down(Key::W) {
-            self.c_im += KEY_TRANSLATION_DISTANCE;
-        }
-        if window.is_key_down(Key::S) {
-            self.c_im -= KEY_TRANSLATION_DISTANCE;
-        }
-        if window.is_key_down(Key::D) {
-            self.c_re += KEY_TRANSLATION_DISTANCE;
-        }
-        if window.is_key_down(Key::A) {
-            self.c_re -= KEY_TRANSLATION_DISTANCE;
+        if let Some((mouse_x, mouse_y)) = window.get_mouse_pos(MouseMode::Pass) {
+            let (width, height) = window.get_size();
+            let pos_x = mouse_x as f64 / width as f64 - 0.5;
+            let pos_y = -mouse_y as f64 / height as f64 + 0.5;
+            let (x_range, y_range) = x_y_ranges(width, height);
+            self.c_re = pos_x * x_range;
+            self.c_im = pos_y * y_range;
         }
 
         // Changing max iterations
@@ -72,7 +60,7 @@ impl Params {
 }
 
 pub struct State {
-    params: Params,
+    params: JuliaParams,
     pixels: Vec<u32>,
     ref_pixels: Vec<u32>,
     palette: ColorPalette,
@@ -81,40 +69,59 @@ pub struct State {
 impl State {
     pub fn new(palette: ColorPalette) -> Self {
         State {
-            params: Params::new(),
+            params: JuliaParams::new(),
             pixels: vec![],
-            ref_pixels: mandelbrot_pixels(MANDELBROT_MAX_ITERATION, &palette),
+            ref_pixels: vec![],
             palette,
         }
     }
 
-    fn update(&mut self, window: &Window) {
-        // Only update pixels if the parameters have been changed
-        let old_params = self.params.clone();
-        self.params.update(window);
-        if self.params != old_params {
-            let start_time = Instant::now();
-            self.pixels = julia_pixels(&self.params, &self.palette);
-            let elapsed_time = format!("{:.2?}", start_time.elapsed());
-            println!(
-                "{:>9} for: Max iters = {:3}, c = {:6.3} + {:6.3}i",
-                elapsed_time, self.params.max_iterations, self.params.c_re, self.params.c_im,
-            );
+    fn update(&mut self, window: &Window, width: usize, height: usize) -> &[u32] {
+        if window.is_key_down(Key::Space) {
+            // Only update ref_pixels if the window has resized
+            if self.ref_pixels.len() != width * height {
+                self.ref_pixels =
+                    mandelbrot_pixels(MANDELBROT_MAX_ITERATION, &self.palette, width, height)
+            }
+            &self.ref_pixels
+        } else {
+            // Only update pixels if the parameters have been changed
+            let old_params = self.params.clone();
+            self.params.update(window);
+            if self.params != old_params && !window.is_key_down(Key::Space) {
+                let start_time = Instant::now();
+                self.pixels = julia_pixels(&self.params, &self.palette, width, height);
+                let elapsed_time = format!("{:.2?}", start_time.elapsed());
+                println!(
+                    "{:>9} for: Max iters = {:3}, width = {:4}, height {:4}, c = {:6.3} + {:6.3}i",
+                    elapsed_time,
+                    self.params.max_iterations,
+                    width,
+                    height,
+                    self.params.c_re,
+                    self.params.c_im,
+                );
+            }
+            &self.pixels
         }
     }
 
     pub fn run(&mut self) {
-        let mut window =
-            Window::new("Julia Explorer", WIDTH, HEIGHT, WindowOptions::default()).unwrap();
-
+        let mut window = Window::new(
+            "Julia Explorer",
+            INITIAL_WIDTH,
+            INITIAL_HEIGHT,
+            WindowOptions {
+                resize: true,
+                scale_mode: ScaleMode::Center,
+                ..WindowOptions::default()
+            },
+        )
+        .unwrap();
         while window.is_open() && !window.is_key_down(Key::Escape) {
-            let pixels = if window.is_key_down(Key::Space) {
-                &self.ref_pixels
-            } else {
-                self.update(&window);
-                &self.pixels
-            };
-            window.update_with_buffer(pixels, WIDTH, HEIGHT).unwrap();
+            let (width, height) = window.get_size();
+            let pixels = self.update(&window, width, height);
+            window.update_with_buffer(pixels, width, height).unwrap();
         }
     }
 }

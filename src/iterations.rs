@@ -1,4 +1,4 @@
-use crate::simulation::Params;
+use crate::simulation::JuliaParams;
 use crate::window_size::*;
 use image::Rgb;
 use mandelbruhst_cli::palette::ColorPalette;
@@ -16,28 +16,24 @@ fn iterations(mut z_re: f64, mut z_im: f64, c_re: f64, c_im: f64, max_iterations
     iterations as f64
 }
 
-fn rev_appended(mut a: Vec<u32>) -> Vec<u32> {
-    let mut b = a.clone();
-    b.reverse();
-    a.append(&mut b);
-    a
-}
-
 fn get_pixels(
     num_pixels: usize,
+    width: usize,
+    height: usize,
     get_pixel_from_coords: impl Fn(f64, f64) -> u32 + Sync,
 ) -> Vec<u32> {
-    let precomp1 = X_RANGE / (WIDTH_F - 1.0);
-    let precomp2 = -X_RANGE / 2.0;
-    let precomp3 = -Y_RANGE / (HEIGHT_F - 1.0);
-    let precomp4 = Y_RANGE / 2.0;
+    let (x_range, y_range) = x_y_ranges(width, height);
+    let x_per_pixel = x_range / (width as f64 - 1.0);
+    let min_x_range = -x_range / 2.0;
+    let y_per_pixel = -y_range / (height as f64 - 1.0);
+    let min_y_range = y_range / 2.0;
     (0..num_pixels)
         .into_par_iter()
         .map(|i| {
-            let col = i % WIDTH;
-            let row = i / WIDTH;
-            let x = col as f64 * precomp1 + precomp2;
-            let y = row as f64 * precomp3 + precomp4;
+            let col = i % width;
+            let row = i / width;
+            let x = col as f64 * x_per_pixel + min_x_range;
+            let y = row as f64 * y_per_pixel + min_y_range;
             get_pixel_from_coords(x, y)
         })
         .collect()
@@ -48,17 +44,44 @@ fn iterations_to_u32(iterations: f64, max_iterations: u32, palette: &ColorPalett
     (r as u32) << 16 | (g as u32) << 8 | (b as u32)
 }
 
-pub fn julia_pixels(params: &Params, palette: &ColorPalette) -> Vec<u32> {
+pub fn julia_pixels(
+    params: &JuliaParams,
+    palette: &ColorPalette,
+    width: usize,
+    height: usize,
+) -> Vec<u32> {
     let get_pixel_from_coords = |x, y| {
         let iterations = iterations(x, y, params.c_re, params.c_im, params.max_iterations);
         iterations_to_u32(iterations, params.max_iterations, palette)
     };
-    let first_half = get_pixels(HEIGHT * WIDTH / 2, get_pixel_from_coords);
-    rev_appended(first_half)
+    let mut first_half = get_pixels(
+        (width * height + 1) / 2,
+        width,
+        height,
+        get_pixel_from_coords,
+    );
+    // Save calculating the second half - just duplicate
+    let mut second_half = first_half.clone();
+    // If there is a centre pixel we shoudn't duplicate it
+    if width % 2 == 1 && height % 2 == 1 {
+        second_half.pop();
+    }
+    second_half.reverse();
+    first_half.append(&mut second_half);
+    first_half
 }
 
-pub fn mandelbrot_pixels(max_iterations: u32, palette: &ColorPalette) -> Vec<u32> {
-    get_pixels(HEIGHT * WIDTH, |x, y| {
+pub fn mandelbrot_pixels(
+    max_iterations: u32,
+    palette: &ColorPalette,
+    width: usize,
+    mut height: usize,
+) -> Vec<u32> {
+    // Avoid a filled white line along the negative x-axis
+    if height % 2 == 1 {
+        height += 1;
+    }
+    get_pixels(width * height, width, height, |x, y| {
         let iterations = iterations(0.0, 0.0, x, y, max_iterations);
         iterations_to_u32(iterations, max_iterations, palette)
     })

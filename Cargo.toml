@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-minifb = "0.17.0"
+minifb = "0.24.0"
 rayon = "1.5.1"
 image = "0.24.5"
 mandelbruhst-cli = "0.1.0"
