@@ -1,9 +1,9 @@
+use crate::simulation::Params;
+use crate::window_size::*;
 use image::Rgb;
 use mandelbruhst_cli::palette::ColorPalette;
 use rayon::prelude::*;
 use std::marker::Sync;
-
-use crate::*;
 
 fn iterations(mut z_re: f64, mut z_im: f64, c_re: f64, c_im: f64, max_iterations: u32) -> f64 {
     let mut iterations = 0;
@@ -23,7 +23,10 @@ fn rev_appended(mut a: Vec<u32>) -> Vec<u32> {
     a
 }
 
-fn get_pixels(num_pixels: usize, get_pixel: impl Fn(f64, f64) -> u32 + Sync) -> Vec<u32> {
+fn get_pixels(
+    num_pixels: usize,
+    get_pixel_from_coords: impl Fn(f64, f64) -> u32 + Sync,
+) -> Vec<u32> {
     let precomp1 = X_RANGE / (WIDTH_F - 1.0);
     let precomp2 = -X_RANGE / 2.0;
     let precomp3 = -Y_RANGE / (HEIGHT_F - 1.0);
@@ -35,7 +38,7 @@ fn get_pixels(num_pixels: usize, get_pixel: impl Fn(f64, f64) -> u32 + Sync) -> 
             let row = i / WIDTH;
             let x = col as f64 * precomp1 + precomp2;
             let y = row as f64 * precomp3 + precomp4;
-            get_pixel(x, y)
+            get_pixel_from_coords(x, y)
         })
         .collect()
 }
@@ -45,12 +48,12 @@ fn iterations_to_u32(iterations: f64, max_iterations: u32, palette: &ColorPalett
     (r as u32) << 16 | (g as u32) << 8 | (b as u32)
 }
 
-pub fn julia_pixels(c_re: f64, c_im: f64, max_iterations: u32, palette: &ColorPalette) -> Vec<u32> {
-    let get_pixel = |x, y| {
-        let iterations = iterations(x, y, c_re, c_im, max_iterations);
-        iterations_to_u32(iterations, max_iterations, palette)
+pub fn julia_pixels(params: &Params, palette: &ColorPalette) -> Vec<u32> {
+    let get_pixel_from_coords = |x, y| {
+        let iterations = iterations(x, y, params.c_re, params.c_im, params.max_iterations);
+        iterations_to_u32(iterations, params.max_iterations, palette)
     };
-    let first_half = get_pixels(HEIGHT * WIDTH / 2, get_pixel);
+    let first_half = get_pixels(HEIGHT * WIDTH / 2, get_pixel_from_coords);
     rev_appended(first_half)
 }
 
