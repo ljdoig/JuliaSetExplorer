@@ -107,7 +107,7 @@ fn main() {
         WIDTH,
         HEIGHT,
         WindowOptions {
-            resize: true,
+            // resize: true,
             ..WindowOptions::default()
         },
     )
