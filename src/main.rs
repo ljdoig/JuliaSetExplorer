@@ -66,10 +66,9 @@ struct State {
 
 impl State {
     fn new() -> Self {
-        let params = Params::new();
         let palette = ColorPalette::default();
         State {
-            params,
+            params: Params::new(),
             pixels: vec![],
             ref_pixels: mandelbrot_pixels(150, &palette),
             palette,

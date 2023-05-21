@@ -1,4 +1,5 @@
 use rayon::prelude::*;
+use std::marker::Sync;
 
 use crate::josh_palette::ColorPalette;
 use crate::*;
@@ -21,7 +22,7 @@ fn rev_append(mut a: Vec<u32>) -> Vec<u32> {
     a
 }
 
-fn get_coords(num_pixels: usize) -> Vec<(f64, f64)> {
+fn get_pixels(num_pixels: usize, get_pixel: impl Fn(f64, f64) -> u32 + Sync) -> Vec<u32> {
     let precomp1 = X_RANGE / (WIDTH_F - 1.0);
     let precomp2 = -X_RANGE / 2.0;
     let precomp3 = -Y_RANGE / (HEIGHT_F - 1.0);
@@ -33,24 +34,23 @@ fn get_coords(num_pixels: usize) -> Vec<(f64, f64)> {
             let row = i / WIDTH;
             let x = col as f64 * precomp1 + precomp2;
             let y = row as f64 * precomp3 + precomp4;
-            (x, y)
+            get_pixel(x, y)
         })
         .collect()
 }
 
 pub fn julia_pixels(c_re: f64, c_im: f64, max_iterations: u32, palette: &ColorPalette) -> Vec<u32> {
-    let first_half: Vec<u32> = get_coords(HEIGHT * WIDTH / 2)
-        .into_par_iter()
-        .map(|(x, y)| iterations(x, y, c_re, c_im, max_iterations))
-        .map(|iterations| palette.value(iterations / max_iterations as f64))
-        .collect();
+    let get_pixel = |x, y| {
+        let iterations = iterations(x, y, c_re, c_im, max_iterations);
+        palette.value(iterations / max_iterations as f64)
+    };
+    let first_half = get_pixels(HEIGHT * WIDTH / 2, get_pixel);
     rev_append(first_half)
 }
 
 pub fn mandelbrot_pixels(max_iterations: u32, palette: &ColorPalette) -> Vec<u32> {
-    get_coords(HEIGHT * WIDTH)
-        .into_par_iter()
-        .map(|(x, y)| iterations(0.0, 0.0, x, y, max_iterations))
-        .map(|iterations| palette.value(iterations / max_iterations as f64))
-        .collect()
+    get_pixels(HEIGHT * WIDTH, |x, y| {
+        let iterations = iterations(0.0, 0.0, x, y, max_iterations);
+        palette.value(iterations / max_iterations as f64)
+    })
 }
