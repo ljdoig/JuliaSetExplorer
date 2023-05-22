@@ -20,13 +20,14 @@ fn get_pixels(
     num_pixels: usize,
     width: usize,
     height: usize,
+    vertical_offset: bool,
     get_pixel_from_coords: impl Fn(f64, f64) -> u32 + Sync,
 ) -> Vec<u32> {
     let (x_range, y_range) = x_y_ranges(width, height);
     let x_per_pixel = x_range / (width as f64 - 1.0);
     let min_x_range = -x_range / 2.0;
     let y_per_pixel = -y_range / (height as f64 - 1.0);
-    let min_y_range = y_range / 2.0;
+    let min_y_range = y_range / 2.0 + if vertical_offset { 0.001 } else { 0.0 };
     (0..num_pixels)
         .into_par_iter()
         .map(|i| {
@@ -58,6 +59,7 @@ pub fn julia_pixels(
         (width * height + 1) / 2,
         width,
         height,
+        false,
         get_pixel_from_coords,
     );
     // Save calculating the second half - just duplicate
@@ -75,13 +77,11 @@ pub fn mandelbrot_pixels(
     max_iterations: u32,
     palette: &ColorPalette,
     width: usize,
-    mut height: usize,
+    height: usize,
 ) -> Vec<u32> {
     // Avoid a filled white line along the negative x-axis
-    if height % 2 == 1 {
-        height += 1;
-    }
-    get_pixels(width * height, width, height, |x, y| {
+    let vertical_offset = height % 2 == 1;
+    get_pixels(width * height, width, height, vertical_offset, |x, y| {
         let iterations = iterations(0.0, 0.0, x, y, max_iterations);
         iterations_to_u32(iterations, max_iterations, palette)
     })

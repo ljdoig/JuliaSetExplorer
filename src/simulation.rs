@@ -5,8 +5,8 @@ use minifb::{Key, KeyRepeat, MouseButton, MouseMode, ScaleMode, Window, WindowOp
 use std::time::Instant;
 
 const MAX_ITERATION_DEFAULT: u32 = 60;
-const MAX_ITERATION_JUMP: u32 = 4;
-const MAX_ITERATION_LOWER_BOUND: u32 = 10;
+const MAX_ITERATION_JUMP: u32 = 3;
+const MAX_ITERATION_LOWER_BOUND: u32 = 12;
 const MANDELBROT_MAX_ITERATION: u32 = 100;
 
 #[derive(PartialEq, PartialOrd, Clone, Debug)]
@@ -38,17 +38,12 @@ impl JuliaParams {
 
         // Changing max iterations
         if window.get_mouse_down(MouseButton::Left) || window.is_key_down(Key::Left) {
-            if self.max_iterations == MAX_ITERATION_LOWER_BOUND {
-                self.max_iterations = MAX_ITERATION_JUMP;
-            } else {
-                self.max_iterations += MAX_ITERATION_JUMP;
-            }
+            self.max_iterations += MAX_ITERATION_JUMP;
         }
         if window.get_mouse_down(MouseButton::Right) || window.is_key_down(Key::Right) {
-            if self.max_iterations <= MAX_ITERATION_JUMP {
+            self.max_iterations -= MAX_ITERATION_JUMP;
+            if self.max_iterations < MAX_ITERATION_LOWER_BOUND {
                 self.max_iterations = MAX_ITERATION_LOWER_BOUND;
-            } else {
-                self.max_iterations -= MAX_ITERATION_JUMP;
             }
         }
 
