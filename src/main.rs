@@ -1,4 +1,4 @@
-use explorer::simulation::State;
+use julia_set_explorer::simulation::State;
 use mandelbruhst_cli::palette::{ColorPalette, ConfigRGB};
 
 fn main() {

@@ -1,7 +1,10 @@
 [package]
-name = "explorer"
+name = "julia_set_explorer"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+authors = ["Lachlan Doig <lachjd@protonmail.com>"]
+description = "Interactive visualisation of Julia sets"
 
 [dependencies]
 minifb = "0.24.0"
