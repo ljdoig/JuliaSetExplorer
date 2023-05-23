@@ -1,7 +1,7 @@
 use crate::iterations::{julia_pixels, mandelbrot_pixels};
 use crate::window_size::*;
 use mandelbruhst_cli::palette::ColorPalette;
-use minifb::{Key, KeyRepeat, MouseButton, MouseMode, ScaleMode, Window, WindowOptions};
+use minifb::{Key, KeyRepeat, MouseButton, MouseMode, Window, WindowOptions};
 use std::time::Instant;
 
 const MAX_ITERATION_DEFAULT: u32 = 60;
@@ -25,10 +25,9 @@ impl JuliaParams {
         }
     }
 
-    pub fn update(&mut self, window: &Window) {
+    pub fn update(&mut self, window: &Window, width: usize, height: usize) {
         // Translation
         if let Some((mouse_x, mouse_y)) = window.get_mouse_pos(MouseMode::Pass) {
-            let (width, height) = window.get_size();
             let pos_x = mouse_x as f64 / width as f64 - 0.5;
             let pos_y = -mouse_y as f64 / height as f64 + 0.5;
             let (x_range, y_range) = x_y_ranges(width, height);
@@ -82,8 +81,8 @@ impl State {
         } else {
             // Only update pixels if the parameters have been changed
             let old_params = self.params.clone();
-            self.params.update(window);
-            if self.params != old_params && !window.is_key_down(Key::Space) {
+            self.params.update(window, width, height);
+            if self.params != old_params || self.pixels.len() != width * height {
                 let start_time = Instant::now();
                 self.pixels = julia_pixels(&self.params, &self.palette, width, height);
                 let elapsed_time = format!("{:.2?}", start_time.elapsed());
@@ -108,12 +107,12 @@ impl State {
             INITIAL_HEIGHT,
             WindowOptions {
                 resize: true,
-                scale_mode: ScaleMode::Center,
                 ..WindowOptions::default()
             },
         )
         .unwrap();
         while window.is_open() && !window.is_key_down(Key::Escape) {
+            // Ensure width and height are consistent throughout loop
             let (width, height) = window.get_size();
             let pixels = self.update(&window, width, height);
             window.update_with_buffer(pixels, width, height).unwrap();
