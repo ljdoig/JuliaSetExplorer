@@ -21,8 +21,12 @@ You can always clone and run
 ```
 cargo run --release
 ```
-but since the resulting executables are so small I've also included them in the repo for those on 
-[Linux/MacOS](./executables/unix/explorer.exe) or [Windows](./executables/windows/explorer.exe.zip).
+but since the resulting executables are so small I've also included them in the repo for those on:
+* [Linux](./executables/linux/julia_set_explorer.zip)
+* [MacOS](./executables/mac/julia_set_explorer.zip)
+* [Windows](./executables/windows/julia_set_explorer.exe.zip)
+
+
 Just download and unzip. You might have to right-click and select open after unzipping.
 
 ## Examples
