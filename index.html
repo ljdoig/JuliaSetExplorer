@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>My Rust + Webpack project!</title>
+    <style>
+      body {
+        background: black;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      canvas {
+        width: 100vw;
+        height: 100vh;
+        image-rendering: crisp-edges;
+        image-rendering: pixelated;
+        object-fit: contain;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+        import init from './req_anim_frame.js';
+        init();
+    </script>
+  </body>
+</html>
