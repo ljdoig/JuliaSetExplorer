@@ -41,8 +41,8 @@ fn get_pixels(
 }
 
 fn iterations_to_u32(iterations: f64, max_iterations: u32, palette: &ColorPalette) -> u32 {
-    let Rgb([r, g, b]) = palette.value(iterations / max_iterations as f64);
-    (r as u32) << 16 | (g as u32) << 8 | (b as u32)
+    let Rgb([b, g, r]) = palette.value(iterations / max_iterations as f64);
+    0xFF000000 | (r as u32) << 16 | (g as u32) << 8 | (b as u32)
 }
 
 pub fn julia_pixels(

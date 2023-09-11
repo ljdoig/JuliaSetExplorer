@@ -1,10 +1,5 @@
-[package]
-name = "explorer"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+members = [ "web_app" ]
+default-members = ["web_app"]
 
-[dependencies]
-minifb = "0.24.0"
-rayon = "1.5.1"
-image = "0.24.5"
-mandelbruhst-cli = "0.1.0"
+
