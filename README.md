@@ -1,5 +1,7 @@
 # JuliaSetExplorer
 
+[Run now!](https://ljdoig.github.io/JuliaSetExplorer/)
+
 ![blades](./examples/blades.png)
 
 This is an interactive fractal visualiser that lets you walk around the complex plane, generating mesmerising [Julia sets](https://en.wikipedia.org/wiki/Julia_set) as you go. 
@@ -17,11 +19,8 @@ This serves as a kind of map, as the Julia sets generated for a given point will
 
 ## Run
 
-You can always clone and run
-```
-cargo run --release
-```
-but since the resulting executables are so small I've also included them in the repo for those on:
+[Run in browser](https://ljdoig.github.io/JuliaSetExplorer/) 
+or alternaively, since the resulting executables are so small I've also included them in the repo for those on:
 * [Linux](./executables/linux/julia_set_explorer.zip)
 * [MacOS](./executables/mac/julia_set_explorer.zip)
 * [Windows](./executables/windows/julia_set_explorer.exe.zip)
@@ -31,7 +30,7 @@ Just download and unzip. You might have to right-click and select open after unz
 
 ## Examples
 
-Here are some static examples, however they are no substitute for seeing the colours morph and twist dynamically.
+Here are some static examples, however they are no substitute for playing with the dynamic version.
 
 ![dragon](./examples/dragon.png)
 
